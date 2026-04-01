@@ -1,0 +1,39 @@
+[
+  {
+    "name": "GET /init",
+    "method": "GET",
+    "path": "/init?domain=demo.bitrix24.ru",
+    "expectedStatus": 200
+  },
+  {
+    "name": "GET /dashboard",
+    "method": "GET",
+    "path": "/dashboard?domain=demo.bitrix24.ru",
+    "expectedStatus": 200
+  },
+  {
+    "name": "GET /categories",
+    "method": "GET",
+    "path": "/categories?domain=demo.bitrix24.ru",
+    "expectedStatus": 200
+  },
+  {
+    "name": "POST /expenses",
+    "method": "POST",
+    "path": "/expenses?domain=demo.bitrix24.ru",
+    "body": { "category_id": 1, "amount": 50000, "expense_date": "2024-01-15", "description": "Тест расход" },
+    "expectedStatus": 201
+  },
+  {
+    "name": "GET /subscription",
+    "method": "GET",
+    "path": "/subscription?domain=demo.bitrix24.ru",
+    "expectedStatus": 200
+  },
+  {
+    "name": "GET /referral",
+    "method": "GET",
+    "path": "/referral?domain=demo.bitrix24.ru",
+    "expectedStatus": 200
+  }
+]
