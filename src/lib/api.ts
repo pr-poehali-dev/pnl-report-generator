@@ -44,7 +44,12 @@ async function apiFetch(path: string, options?: RequestInit) {
 }
 
 // In-memory store for demo mutations
-const demoStore = {
+const demoStore: {
+  categories: PnlCategory[];
+  expenses: Expense[];
+  revenue: RevenueEntry[];
+  nextId: number;
+} = {
   categories: [...DEMO_CATEGORIES],
   expenses: [...DEMO_EXPENSES],
   revenue: [...DEMO_REVENUE],
@@ -93,6 +98,11 @@ async function demoFetch(path: string, options?: RequestInit): Promise<unknown> 
     if (idx >= 0) demoStore.expenses[idx] = { ...demoStore.expenses[idx], ...body };
     return demoStore.expenses[idx];
   }
+  if (base.startsWith("/expenses/") && method === "DELETE") {
+    const id = Number(base.split("/")[2]);
+    demoStore.expenses = demoStore.expenses.filter(e => e.id !== id);
+    return { success: true };
+  }
   if (base === "/revenue") {
     if (method === "POST") {
       const rev = { ...body, id: ++demoStore.nextId };
@@ -100,6 +110,17 @@ async function demoFetch(path: string, options?: RequestInit): Promise<unknown> 
       return rev;
     }
     return demoStore.revenue;
+  }
+  if (base.startsWith("/revenue/") && method === "PUT") {
+    const id = Number(base.split("/")[2]);
+    const idx = demoStore.revenue.findIndex(r => r.id === id);
+    if (idx >= 0) demoStore.revenue[idx] = { ...demoStore.revenue[idx], ...body };
+    return demoStore.revenue[idx];
+  }
+  if (base.startsWith("/revenue/") && method === "DELETE") {
+    const id = Number(base.split("/")[2]);
+    demoStore.revenue = demoStore.revenue.filter(r => r.id !== id);
+    return { success: true };
   }
   if (base === "/sync-crm") return { success: true, added: 0 };
   if (base === "/settings") {
@@ -114,7 +135,10 @@ async function demoFetch(path: string, options?: RequestInit): Promise<unknown> 
     const reply = generateDemoAIReply(msg);
     return { reply };
   }
-  if (base === "/ai-chat/history") return DEMO_AI_HISTORY;
+  if (base === "/ai-chat/history") {
+    if (method === "DELETE") return { success: true };
+    return DEMO_AI_HISTORY;
+  }
   if (base === "/export/pnl") return { monthly: DEMO_DASHBOARD.monthly, categories: [...DEMO_DASHBOARD.revenue, ...DEMO_DASHBOARD.cogs, ...DEMO_DASHBOARD.opex], year: new Date().getFullYear() };
   return {};
 }
@@ -174,6 +198,7 @@ export const api = {
   },
   createExpense: (data: unknown) => apiFetch("/expenses", { method: "POST", body: JSON.stringify(data) }),
   updateExpense: (id: number, data: unknown) => apiFetch(`/expenses/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteExpense: (id: number) => apiFetch(`/expenses/${id}`, { method: "DELETE" }),
 
   // Revenue
   getRevenue: (dateFrom?: string, dateTo?: string) => {
@@ -185,6 +210,8 @@ export const api = {
     return apiFetch(q);
   },
   createRevenue: (data: unknown) => apiFetch("/revenue", { method: "POST", body: JSON.stringify(data) }),
+  updateRevenue: (id: number, data: unknown) => apiFetch(`/revenue/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteRevenue: (id: number) => apiFetch(`/revenue/${id}`, { method: "DELETE" }),
   syncCRM: (deals: unknown[]) => apiFetch("/sync-crm", { method: "POST", body: JSON.stringify({ deals }) }),
 
   // Settings
@@ -201,6 +228,7 @@ export const api = {
   // AI Chat
   sendAIMessage: (message: string) => apiFetch("/ai-chat", { method: "POST", body: JSON.stringify({ message }) }),
   getAIChatHistory: () => apiFetch("/ai-chat/history"),
+  clearAIChatHistory: () => apiFetch("/ai-chat/history", { method: "DELETE" }),
 
   // Export
   getExportData: (year?: string) => apiFetch(`/export/pnl${year ? `?year=${year}` : ""}`),
@@ -252,7 +280,10 @@ export type DashboardData = {
     netProfit: number;
     margin: number;
     grossMargin: number;
+    opexRatio?: number;
+    cogsRatio?: number;
   };
+  trends?: Record<string, number | null>;
   revenue: PnlCategory[];
   cogs: PnlCategory[];
   opex: PnlCategory[];
@@ -266,6 +297,8 @@ export type MonthlyData = {
   revenue: number;
   cogs: number;
   opex: number;
+  gross?: number;
+  net?: number;
 };
 
 export type Subscription = {
